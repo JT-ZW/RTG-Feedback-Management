@@ -137,6 +137,7 @@ export function PublicMysteryShopperForm({ properties }: { properties: Property[
                 value={propertyId}
                 onChange={e => setPropertyId(e.target.value)}
                 className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900"
+                suppressHydrationWarning
               >
                 <option value="">Select property…</option>
                 {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -151,6 +152,7 @@ export function PublicMysteryShopperForm({ properties }: { properties: Property[
                 max={new Date().toISOString().split('T')[0]}
                 onChange={e => setVisitDate(e.target.value)}
                 className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900"
+                suppressHydrationWarning
               />
             </div>
             <div>
@@ -162,6 +164,7 @@ export function PublicMysteryShopperForm({ properties }: { properties: Property[
                 onChange={e => setShopperName(e.target.value)}
                 placeholder="Full name"
                 className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900"
+                suppressHydrationWarning
               />
             </div>
           </div>
@@ -240,6 +243,7 @@ export function PublicMysteryShopperForm({ properties }: { properties: Property[
                         placeholder="Optional comment…"
                         rows={2}
                         className="w-full text-xs border border-stone-200 rounded px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-stone-400"
+                        suppressHydrationWarning
                       />
                     </div>
 
@@ -302,6 +306,7 @@ export function PublicMysteryShopperForm({ properties }: { properties: Property[
                 onChange={e => setShopperName(e.target.value)}
                 required
                 className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900"
+                suppressHydrationWarning
               />
             </div>
             <div>
@@ -311,6 +316,7 @@ export function PublicMysteryShopperForm({ properties }: { properties: Property[
                 value={new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
                 readOnly
                 className="w-full border border-stone-100 rounded-lg px-3 py-2 text-sm bg-stone-50 text-stone-500"
+                suppressHydrationWarning
               />
             </div>
           </div>

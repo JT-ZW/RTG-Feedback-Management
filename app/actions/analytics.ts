@@ -208,22 +208,30 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   const propMap: Record<string, string> = {}
   for (const p of propList) propMap[p.id] = p.name
 
-  // 2 ── Fetch all module rows (reused everywhere)
+  // 2 ── Fetch all module rows in parallel
   const moduleRows: Record<string, RawRow[]> = {}
   let totalSubmissions = 0
 
-  for (const mod of MODULES) {
-    const dc = dateColFor(mod.key)
-    const selectShift = mod.key === 'restaurant_lunch_dinner' ? ', shift' : ''
-    const { data: rows, error: fetchErr } = await db
-      .from(mod.table as never)
-      .select(`property_id, ${mod.scoreCol}, ${dc}${selectShift}`)
-      .eq('organization_id', orgId)
-      .gte(dc, since)
-      .order(dc, { ascending: true })
-    if (fetchErr) console.error(`[analytics] ${mod.key} fetch error:`, fetchErr.message)
-    moduleRows[mod.key] = (rows ?? []) as RawRow[]
-    totalSubmissions += moduleRows[mod.key].length
+  const moduleFetchResults = await Promise.all(
+    MODULES.map(mod => {
+      const dc = dateColFor(mod.key)
+      const selectShift = mod.key === 'restaurant_lunch_dinner' ? ', shift' : ''
+      return db
+        .from(mod.table as never)
+        .select(`property_id, ${mod.scoreCol}, ${dc}${selectShift}`)
+        .eq('organization_id', orgId)
+        .gte(dc, since)
+        .order(dc, { ascending: true })
+        .then(({ data: rows, error: fetchErr }) => {
+          if (fetchErr) console.error(`[analytics] ${mod.key} fetch error:`, fetchErr.message)
+          return { key: mod.key, rows: (rows ?? []) as RawRow[] }
+        })
+    })
+  )
+
+  for (const { key, rows } of moduleFetchResults) {
+    moduleRows[key] = rows
+    totalSubmissions += rows.length
   }
 
   // 3 ── Property × Module compliance matrix
@@ -466,7 +474,7 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   ]
 
   for (const mod of yesNoMods) {
-    const { data: rRows } = await supabase
+    const { data: rRows } = await db
       .from(mod.table as never)
       .select('responses')
       .eq('organization_id', orgId)
@@ -553,7 +561,7 @@ export async function generateOrgInsights(): Promise<{ success: boolean; error?:
   const since = thirtyDaysAgo.toISOString().split('T')[0]
   const todayStr = new Date().toISOString().split('T')[0]
 
-  const { data: properties } = await supabase
+  const { data: properties } = await admin
     .from('properties')
     .select('id, name')
     .eq('organization_id', orgId)
@@ -567,7 +575,7 @@ export async function generateOrgInsights(): Promise<{ success: boolean; error?:
 
   for (const mod of MODULES) {
     const dc = dateColFor(mod.key)
-    const { data: rows } = await supabase
+    const { data: rows } = await admin
       .from(mod.table as never)
       .select(`property_id, compliance_score, percentage`)
       .eq('organization_id', orgId)
@@ -604,7 +612,7 @@ export async function generateOrgInsights(): Promise<{ success: boolean; error?:
     { table: 'restaurant_breakfast_submissions',      items: ALL_BREAKFAST_ITEMS as { id: string; label: string }[],            label: 'Breakfast',    dc: 'submission_date' },
   ]
   for (const mod of yesNoMods) {
-    const { data: rRows } = await supabase
+    const { data: rRows } = await admin
       .from(mod.table as never)
       .select('responses')
       .eq('organization_id', orgId)
@@ -635,7 +643,7 @@ export async function generateOrgInsights(): Promise<{ success: boolean; error?:
   // ── Extract free-text comments ────────────────────────────────────────────
   const extractedComments: string[] = []
 
-  const { data: msRows } = await supabase
+  const { data: msRows } = await admin
     .from('mystery_shopper_submissions')
     .select('responses, property_id')
     .eq('organization_id', orgId)
@@ -653,7 +661,7 @@ export async function generateOrgInsights(): Promise<{ success: boolean; error?:
     } catch { /* skip */ }
   }
 
-  const { data: dmRows } = await supabase
+  const { data: dmRows } = await admin
     .from('duty_manager_submissions')
     .select('responses, room_checks, hod_comments, property_id')
     .eq('organization_id', orgId)

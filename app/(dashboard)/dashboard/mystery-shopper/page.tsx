@@ -272,7 +272,7 @@ export default async function MysteryShopperAdminPage() {
               const c = tileGradeClass(prop.avg)
               return (
                 <div key={prop.id} className="flex items-center gap-3">
-                  <span className="w-44 text-xs font-medium text-stone-700 truncate shrink-0">{prop.name}</span>
+                  <span className="w-24 sm:w-36 lg:w-44 text-xs font-medium text-stone-700 truncate shrink-0">{prop.name}</span>
                   <div className="flex-1 h-2 bg-stone-100 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full ${

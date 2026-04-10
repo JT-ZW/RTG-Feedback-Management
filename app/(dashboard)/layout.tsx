@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser, getPrimaryRole } from '@/lib/auth'
-import { Sidebar } from '@/components/sidebar'
 import { logout } from '@/app/actions/auth'
 import { LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { DashboardShell } from '@/components/dashboard-shell'
 
 async function getActiveProperty(organizationId: string, propertyId?: string) {
   if (!propertyId) return null
@@ -66,42 +66,23 @@ export default async function DashboardLayout({
   const fullName = `${profile.first_name} ${profile.last_name}`.trim() || profile.email
 
   return (
-    <div className="flex min-h-screen bg-[#ece8f5]">
-      <Sidebar
-        userName={fullName}
-        propertyName={property?.name}
-        roleName={primaryRole}
-      />
-
-      <div className="flex flex-col flex-1 min-w-0">
-        {/* Top header bar */}
-        <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-stone-200 shrink-0">
-          <div className="flex items-center gap-3">
-            {/* Thin gold accent line */}
-            <div className="w-0.5 h-7 rounded-full bg-rtg-gold" />
-            <p className="text-sm text-stone-500">
-              {new Date().toLocaleDateString('en-GB', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </p>
-          </div>
-          <form action={logout}>
-            <button
-              type="submit"
-              className="flex items-center gap-2 text-sm text-stone-500 hover:text-stone-800 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign out
-            </button>
-          </form>
-        </header>
-
-        {/* Page content */}
-        <main className="flex-1 p-6">{children}</main>
-      </div>
-    </div>
+    <DashboardShell
+      userName={fullName}
+      propertyName={property?.name}
+      roleName={primaryRole}
+      logoutNode={
+        <form action={logout}>
+          <button
+            type="submit"
+            className="flex items-center gap-2 text-sm text-stone-500 hover:text-stone-800 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Sign out</span>
+          </button>
+        </form>
+      }
+    >
+      {children}
+    </DashboardShell>
   )
 }

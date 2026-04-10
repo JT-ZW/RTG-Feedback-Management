@@ -15,6 +15,7 @@ import {
   ChevronRight,
   BarChart2,
   Users,
+  X,
 } from 'lucide-react'
 
 // activePaths: sidebar item highlights when pathname starts with any of these
@@ -80,15 +81,36 @@ interface SidebarProps {
   userName: string
   propertyName?: string
   roleName?: string
+  isOpen?: boolean
+  onClose?: () => void
 }
 
-export function Sidebar({ userName, propertyName, roleName }: SidebarProps) {
+export function Sidebar({ userName, propertyName, roleName, isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname()
 
   return (
-    <aside className="flex flex-col w-64 min-h-screen bg-rtg-brown text-stone-100 shrink-0">
+    <aside
+      className={cn(
+        'flex flex-col bg-rtg-brown text-stone-100 overflow-y-auto',
+        // Mobile: fixed overlay, slides in/out
+        'fixed inset-y-0 left-0 z-30 w-72',
+        // Desktop: static in document flow
+        'lg:static lg:z-auto lg:w-64 lg:min-h-screen lg:shrink-0',
+        // Slide animation — desktop always visible
+        'transition-transform duration-200 ease-in-out',
+        isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+      )}
+    >
       {/* Brand */}
-      <div className="px-5 py-5 border-b border-rtg-gold">
+      <div className="relative px-5 py-5 border-b border-rtg-gold shrink-0">
+        {/* Close button - mobile only */}
+        <button
+          onClick={onClose}
+          className="lg:hidden absolute top-4 right-4 p-1 rounded-md text-stone-400 hover:text-stone-100 transition-colors"
+          aria-label="Close navigation"
+        >
+          <X className="w-5 h-5" />
+        </button>
         <Image
           src="/rtg-logo.png"
           alt="Rainbow Tourism Group"

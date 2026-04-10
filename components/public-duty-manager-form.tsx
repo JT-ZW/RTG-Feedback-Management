@@ -142,6 +142,7 @@ export function PublicDutyManagerForm({ properties }: { properties: Property[] }
                 value={propertyId}
                 onChange={e => setPropertyId(e.target.value)}
                 className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900"
+                suppressHydrationWarning
               >
                 <option value="">Select property…</option>
                 {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -156,6 +157,7 @@ export function PublicDutyManagerForm({ properties }: { properties: Property[] }
                 max={new Date().toISOString().split('T')[0]}
                 onChange={e => setShiftDate(e.target.value)}
                 className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900"
+                suppressHydrationWarning
               />
             </div>
             <div>
@@ -178,7 +180,7 @@ export function PublicDutyManagerForm({ properties }: { properties: Property[] }
                 ))}
               </div>
               {/* hidden input for required validation */}
-              <input type="text" required value={shift} onChange={() => {}} className="sr-only" tabIndex={-1} />
+              <input type="text" required value={shift} onChange={() => {}} className="sr-only" tabIndex={-1} suppressHydrationWarning />
             </div>
             <div>
               <label className="block text-xs font-medium text-stone-600 mb-1">Duty Manager</label>
@@ -189,6 +191,7 @@ export function PublicDutyManagerForm({ properties }: { properties: Property[] }
                 onChange={e => setManagerName(e.target.value)}
                 placeholder="Full name"
                 className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-stone-900"
+                suppressHydrationWarning
               />
             </div>
           </div>
@@ -244,6 +247,7 @@ export function PublicDutyManagerForm({ properties }: { properties: Property[] }
                       onChange={e => setComment(section.id, item.id, e.target.value)}
                       placeholder="Optional comment…"
                       className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-stone-400"
+                      suppressHydrationWarning
                     />
                   </div>
                 )
@@ -280,6 +284,7 @@ export function PublicDutyManagerForm({ properties }: { properties: Property[] }
                     onChange={e => updateRoomCheck(idx, 'roomNo', e.target.value)}
                     placeholder="e.g. 405"
                     className="w-24 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-stone-400"
+                    suppressHydrationWarning
                   />
                 </div>
                 <div className="flex-1">
@@ -290,6 +295,7 @@ export function PublicDutyManagerForm({ properties }: { properties: Property[] }
                     placeholder="Enter observations for this room…"
                     rows={2}
                     className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-stone-400"
+                    suppressHydrationWarning
                   />
                 </div>
                 {roomChecks.length > 1 && (

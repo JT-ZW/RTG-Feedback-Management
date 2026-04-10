@@ -90,7 +90,7 @@ export default async function DashboardPage() {
         <p className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-3">
           Good {getTimeOfDay()}, {firstName}
         </p>
-        <h1 className="text-4xl font-bold text-stone-900 leading-tight mb-3">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-stone-900 leading-tight mb-3">
           Your Operations<br />Intelligence Platform.
         </h1>
         <p className="text-stone-500 text-sm leading-relaxed">

@@ -13,10 +13,17 @@ export function createAdminClient() {
     throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars')
   }
 
+  // 6-second timeout — fail fast rather than hanging for the 10s undici default
+  const fetchWithTimeout: typeof fetch = (input, init) =>
+    fetch(input, { ...init, signal: AbortSignal.timeout(6000) })
+
   return createClient(url, key, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
+    },
+    global: {
+      fetch: fetchWithTimeout,
     },
   })
 }

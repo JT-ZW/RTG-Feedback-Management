@@ -21,7 +21,9 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(
     searchParams.get('error') === 'reset_failed'
       ? 'The password reset link has expired or is invalid. Please request a new one.'
-      : null
+      : searchParams.get('reason') === 'inactivity'
+        ? 'You were signed out after 15 minutes of inactivity.'
+        : null
   )
 
   async function handleSubmit(e: React.FormEvent) {
