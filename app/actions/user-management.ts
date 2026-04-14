@@ -74,7 +74,7 @@ export async function getOrgUsers(): Promise<{ users: OrgUser[]; error?: string 
   }
 
   const byUser: Record<string, { roleName: string; propId: string; propName: string }[]> = {}
-  for (const row of (roleRows ?? []) as RoleRow[]) {
+  for (const row of (roleRows ?? []) as unknown as RoleRow[]) {
     if (!byUser[row.user_id]) byUser[row.user_id] = []
     byUser[row.user_id].push({
       roleName: row.roles?.name ?? '',
