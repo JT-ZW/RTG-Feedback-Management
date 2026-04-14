@@ -224,7 +224,7 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
         .order(dc, { ascending: true })
         .then(({ data: rows, error: fetchErr }) => {
           if (fetchErr) console.error(`[analytics] ${mod.key} fetch error:`, fetchErr.message)
-          return { key: mod.key, rows: (rows ?? []) as RawRow[] }
+          return { key: mod.key, rows: (rows ?? []) as unknown as RawRow[] }
         })
     })
   )
