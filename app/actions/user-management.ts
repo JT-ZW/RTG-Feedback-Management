@@ -12,6 +12,20 @@ import {
   type UpdateUserInput,
 } from '@/lib/user-management-types'
 
+// ─── Validation helpers ──────────────────────────────────────────────────────
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const MAX_PROPERTIES = 50
+
+function isValidUuid(v: string): boolean {
+  return UUID_RE.test(v)
+}
+
+function isValidEmail(v: string): boolean {
+  return EMAIL_RE.test(v) && v.length <= 320
+}
+
 // ─── Auth guard ──────────────────────────────────────────────────────────────
 
 async function assertAdmin() {
@@ -120,9 +134,17 @@ export async function inviteUser(
   if ('error' in auth) return { success: false, error: auth.error }
 
   if (!input.email.trim()) return { success: false, error: 'Email is required.' }
+  if (!isValidEmail(input.email.trim())) return { success: false, error: 'Invalid email address.' }
   if (!input.firstName.trim()) return { success: false, error: 'First name is required.' }
+  if (input.firstName.trim().length > 100) return { success: false, error: 'First name is too long.' }
   if (!input.lastName.trim()) return { success: false, error: 'Last name is required.' }
+  if (input.lastName.trim().length > 100) return { success: false, error: 'Last name is too long.' }
   if (input.propertyIds.length === 0) return { success: false, error: 'Assign at least one property.' }
+  if (input.propertyIds.length > MAX_PROPERTIES) return { success: false, error: `Cannot assign more than ${MAX_PROPERTIES} properties at once.` }
+  if (input.propertyIds.some(id => !isValidUuid(id))) return { success: false, error: 'Invalid property selection.' }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (!appUrl) return { success: false, error: 'Server misconfiguration: NEXT_PUBLIC_APP_URL is not set.' }
 
   const db = createAdminClient()
 
@@ -134,7 +156,7 @@ export async function inviteUser(
         first_name: input.firstName.trim(),
         last_name: input.lastName.trim(),
       },
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/login`,
+      redirectTo: `${appUrl}/login`,
     }
   )
 
@@ -196,7 +218,10 @@ export async function updateUser(
   const auth = await assertAdmin()
   if ('error' in auth) return { success: false, error: auth.error }
 
+  if (!isValidUuid(input.userId)) return { success: false, error: 'Invalid user ID.' }
   if (input.propertyIds.length === 0) return { success: false, error: 'Assign at least one property.' }
+  if (input.propertyIds.length > MAX_PROPERTIES) return { success: false, error: `Cannot assign more than ${MAX_PROPERTIES} properties at once.` }
+  if (input.propertyIds.some(id => !isValidUuid(id))) return { success: false, error: 'Invalid property selection.' }
 
   const db = createAdminClient()
 
@@ -219,17 +244,30 @@ export async function updateUser(
 
   if (!roleRow) return { success: false, error: 'Role not found.' }
 
-  // Replace all existing role assignments
-  await db.from('user_property_roles').delete().eq('user_id', input.userId)
-
   const assignments = input.propertyIds.map(propId => ({
     user_id: input.userId,
     property_id: propId,
     role_id: roleRow.id,
   }))
 
-  const { error } = await db.from('user_property_roles').insert(assignments)
+  // Upsert new assignments FIRST — the user always has at least the new roles
+  // before any deletions, eliminating the zero-role window.
+  const { error } = await db.from('user_property_roles').upsert(assignments, {
+    onConflict: 'user_id,property_id',
+  })
   if (error) return { success: false, error: error.message }
+
+  // Delete rows for properties that are no longer in the new assignment list.
+  // Use the array form of .in() — Supabase parameterises the values safely,
+  // avoiding the raw string interpolation that was previously used here.
+  await db
+    .from('user_property_roles')
+    .delete()
+    .eq('user_id', input.userId)
+    .not('property_id', 'in', `(${input.propertyIds.join(',')})`)
+    // Note: propertyIds are validated as UUIDs above so interpolation is safe,
+    // but as an extra defence we only call this when the array is non-empty.
+    // An empty allowlist would delete all rows — the guard above prevents that.
 
   revalidatePath('/dashboard/users')
   return { success: true }
@@ -244,6 +282,8 @@ export async function setUserActive(
   const auth = await assertAdmin()
   if ('error' in auth) return { success: false, error: auth.error }
 
+  if (!isValidUuid(userId)) return { success: false, error: 'Invalid user ID.' }
+
   const db = createAdminClient()
 
   const { error } = await db
@@ -253,6 +293,12 @@ export async function setUserActive(
     .eq('organization_id', auth.orgId)
 
   if (error) return { success: false, error: error.message }
+
+  // When deactivating, immediately revoke all active sessions so the user
+  // cannot continue using an existing JWT until it naturally expires.
+  if (!isActive) {
+    await db.auth.admin.signOut(userId, 'global')
+  }
 
   revalidatePath('/dashboard/users')
   return { success: true }

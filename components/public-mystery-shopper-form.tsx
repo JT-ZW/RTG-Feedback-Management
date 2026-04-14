@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   MYSTERY_SHOPPER_SECTIONS,
   computeScores,
@@ -9,7 +9,8 @@ import {
 } from '@/lib/mystery-shopper-sections'
 import { submitPublicMysteryShopperForm } from '@/app/actions/mystery-shopper-public'
 import { cn } from '@/lib/utils'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, AlertCircle } from 'lucide-react'
+import { toast, Toaster } from 'sonner'
 
 const RATING_COLORS: Record<number, string> = {
   1: 'bg-red-500 text-white',
@@ -51,6 +52,11 @@ export function PublicMysteryShopperForm({ properties }: { properties: Property[
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const errorRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [error])
 
   const setRating = useCallback((sectionId: string, itemId: string, rating: number) => {
     setResponses(prev => ({
@@ -95,7 +101,9 @@ export function PublicMysteryShopperForm({ properties }: { properties: Property[
     if (result.success) {
       setSubmitted(true)
     } else {
-      setError(result.error ?? 'Something went wrong. Please try again.')
+      const msg = result.error ?? 'Something went wrong. Please try again.'
+      setError(msg)
+      toast.error('Submission failed', { description: msg })
     }
   }
 
@@ -323,8 +331,12 @@ export function PublicMysteryShopperForm({ properties }: { properties: Property[
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
-            {error}
+          <div ref={errorRef} className="bg-red-50 border border-red-300 rounded-xl px-4 py-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-700">Cannot submit yet</p>
+              <p className="text-sm text-red-600 mt-0.5">{error}</p>
+            </div>
           </div>
         )}
 
@@ -338,6 +350,7 @@ export function PublicMysteryShopperForm({ properties }: { properties: Property[
           </button>
         </div>
       </form>
+      <Toaster position="top-center" richColors />
     </div>
   )
 }

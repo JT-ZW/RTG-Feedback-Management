@@ -21,20 +21,36 @@ export interface RestaurantLunchDinnerSubmitResult {
   error?: string
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
 export async function submitPublicRestaurantLunchDinner(
   input: RestaurantLunchDinnerSubmitInput
 ): Promise<RestaurantLunchDinnerSubmitResult> {
+  if (!input.propertyId || !UUID_RE.test(input.propertyId)) {
+    return { success: false, error: 'Invalid property.' }
+  }
   if (!input.submitterName.trim()) {
     return { success: false, error: 'Name is required.' }
+  }
+  if (input.submitterName.trim().length > 200) {
+    return { success: false, error: 'Name is too long.' }
   }
   if (!input.position.trim()) {
     return { success: false, error: 'Position is required.' }
   }
-  if (!input.submissionDate) {
-    return { success: false, error: 'Date is required.' }
+  if (input.position.trim().length > 200) {
+    return { success: false, error: 'Position is too long.' }
+  }
+  if (!input.submissionDate || !DATE_RE.test(input.submissionDate)) {
+    return { success: false, error: 'A valid date (YYYY-MM-DD) is required.' }
   }
   if (!['AM', 'PM'].includes(input.shift)) {
     return { success: false, error: 'Please select a shift.' }
+  }
+
+  if (JSON.stringify(input.responses).length > 50_000) {
+    return { success: false, error: 'Submission payload is too large.' }
   }
 
   const admin = createAdminClient()

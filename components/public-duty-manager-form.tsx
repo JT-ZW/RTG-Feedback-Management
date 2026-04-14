@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   DUTY_MANAGER_SECTIONS,
   computeDMScores,
@@ -9,7 +9,8 @@ import {
 } from '@/lib/duty-manager-sections'
 import { submitPublicDutyManagerForm } from '@/app/actions/duty-manager-public'
 import { cn } from '@/lib/utils'
-import { CheckCircle2, Plus, Trash2 } from 'lucide-react'
+import { CheckCircle2, Plus, Trash2, AlertCircle } from 'lucide-react'
+import { toast, Toaster } from 'sonner'
 
 interface Property {
   id: string
@@ -47,6 +48,11 @@ export function PublicDutyManagerForm({ properties }: { properties: Property[] }
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const errorRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [error])
 
   const setRating = useCallback((sectionId: string, itemId: string, rating: 1 | 2 | 3) => {
     setResponses(prev => ({
@@ -100,7 +106,9 @@ export function PublicDutyManagerForm({ properties }: { properties: Property[] }
     if (result.success) {
       setSubmitted(true)
     } else {
-      setError(result.error ?? 'Something went wrong. Please try again.')
+      const msg = result.error ?? 'Something went wrong. Please try again.'
+      setError(msg)
+      toast.error('Submission failed', { description: msg })
     }
   }
 
@@ -340,8 +348,12 @@ export function PublicDutyManagerForm({ properties }: { properties: Property[] }
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-            {error}
+          <div ref={errorRef} className="bg-red-50 border border-red-300 rounded-xl px-4 py-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-700">Cannot submit yet</p>
+              <p className="text-sm text-red-600 mt-0.5">{error}</p>
+            </div>
           </div>
         )}
 
@@ -353,6 +365,7 @@ export function PublicDutyManagerForm({ properties }: { properties: Property[] }
           {submitting ? 'Submitting…' : 'Submit Checklist'}
         </button>
       </form>
+      <Toaster position="top-center" richColors />
     </div>
   )
 }

@@ -16,15 +16,27 @@ export interface PublicSubmitResult {
   error?: string
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
 export async function submitPublicMysteryShopperForm(
   input: PublicSubmitInput
 ): Promise<PublicSubmitResult> {
+  if (!input.propertyId || !UUID_RE.test(input.propertyId)) {
+    return { success: false, error: 'Invalid property.' }
+  }
   if (!input.shopperName.trim()) {
     return { success: false, error: 'Shopper name is required.' }
   }
+  if (input.shopperName.trim().length > 200) {
+    return { success: false, error: 'Shopper name is too long.' }
+  }
+  if (!input.visitDate || !DATE_RE.test(input.visitDate)) {
+    return { success: false, error: 'A valid visit date (YYYY-MM-DD) is required.' }
+  }
 
-  if (!input.visitDate) {
-    return { success: false, error: 'Visit date is required.' }
+  if (JSON.stringify(input.responses).length > 50_000) {
+    return { success: false, error: 'Submission payload is too large.' }
   }
 
   const admin = createAdminClient()

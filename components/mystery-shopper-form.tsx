@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { ChevronDown, ChevronUp, CheckCircle2, AlertCircle } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Property {
   id: string
@@ -123,7 +124,10 @@ export function MysteryShopperForm({ properties, defaultPropertyId }: MysterySho
     setSubmitResult(result)
 
     if (result.success) {
+      toast.success('Submission recorded successfully!')
       setTimeout(() => router.push('/dashboard'), 2000)
+    } else {
+      toast.error(result.error ?? 'Submission failed. Please try again.')
     }
   }
 

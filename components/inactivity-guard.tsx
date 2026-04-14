@@ -18,6 +18,7 @@ export function InactivityGuard() {
   const logoutTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const warnTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const toastId    = useRef<string | number | null>(null)
+  const lastActivityAt = useRef<number>(Date.now())
 
   const clearTimers = useCallback(() => {
     if (logoutTimer.current) clearTimeout(logoutTimer.current)
@@ -37,6 +38,7 @@ export function InactivityGuard() {
 
   const resetTimers = useCallback(() => {
     clearTimers()
+    lastActivityAt.current = Date.now()
 
     // Show a warning 2 minutes before the session expires
     warnTimer.current = setTimeout(() => {
@@ -56,9 +58,16 @@ export function InactivityGuard() {
     const handleActivity = () => resetTimers()
     ACTIVITY_EVENTS.forEach(ev => window.addEventListener(ev, handleActivity, { passive: true }))
 
-    // Also handle tab visibility — restart the clock when the user comes back
+    // Also handle tab visibility — if the user was away longer than the timeout, sign
+    // them out immediately; otherwise restart the clock from where they left off
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') resetTimers()
+      if (document.visibilityState === 'visible') {
+        if (Date.now() - lastActivityAt.current > TIMEOUT_MS) {
+          signOut()
+        } else {
+          resetTimers()
+        }
+      }
     }
     document.addEventListener('visibilitychange', handleVisibility)
 

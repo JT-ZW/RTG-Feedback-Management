@@ -54,6 +54,12 @@ export const getCurrentUser = cache(async function getCurrentUser() {
     }
   }
 
+  // Account deactivated by an admin — treat as unauthenticated so every
+  // downstream caller (dashboard layout, server actions) automatically blocks them.
+  if (!profile.is_active) {
+    return { authenticated: false as const }
+  }
+
   // Fetch all property roles for this user
   const { data: roles } = await admin
     .from('user_property_roles')

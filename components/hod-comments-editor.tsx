@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import { updateHodComments } from '@/app/actions/duty-manager-hod'
-import { MessageSquare, CheckCircle2, Loader2 } from 'lucide-react'
+import { MessageSquare, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 export function HodCommentsEditor({
   submissionId,
@@ -12,20 +13,15 @@ export function HodCommentsEditor({
   initialComments: string | null
 }) {
   const [value, setValue] = useState(initialComments ?? '')
-  const [saved, setSaved] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function handleSave() {
-    setError(null)
-    setSaved(false)
     startTransition(async () => {
       const result = await updateHodComments(submissionId, value)
       if (result.success) {
-        setSaved(true)
-        setTimeout(() => setSaved(false), 3000)
+        toast.success('Comments saved successfully.')
       } else {
-        setError(result.error ?? 'Failed to save.')
+        toast.error(result.error ?? 'Failed to save.')
       }
     })
   }
@@ -44,14 +40,7 @@ export function HodCommentsEditor({
           rows={5}
           className="w-full border border-stone-200 rounded-lg px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-stone-400"
         />
-        <div className="flex items-center justify-between mt-3">
-          {error && <p className="text-xs text-red-600">{error}</p>}
-          {saved && (
-            <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Saved
-            </span>
-          )}
-          {!error && !saved && <span />}
+        <div className="flex items-center justify-end mt-3">
           <button
             onClick={handleSave}
             disabled={isPending}

@@ -1,6 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const INACTIVITY_MS = 15 * 60 * 1000 // 15 minutes
+const LAST_ACTIVE_COOKIE = 'rtg_last_active'
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -38,6 +41,39 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  // Authenticated user on a protected route — enforce inactivity timeout
+  if (user && !isPublicRoute) {
+    const lastActiveStr = request.cookies.get(LAST_ACTIVE_COOKIE)?.value
+    const now = Date.now()
+
+    const lastActive = lastActiveStr ? parseInt(lastActiveStr, 10) : NaN
+    const isStale = isNaN(lastActive) || now - lastActive > INACTIVITY_MS
+
+    if (isStale) {
+      // Session has gone stale — sign out and force re-login
+      await supabase.auth.signOut()
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('reason', 'inactivity')
+      const redirectRes = NextResponse.redirect(url)
+      // Copy any cookie mutations from signOut (clearing auth tokens) to the redirect response
+      supabaseResponse.cookies.getAll().forEach(({ name, value, ...opts }) => {
+        redirectRes.cookies.set(name, value, opts)
+      })
+      redirectRes.cookies.delete(LAST_ACTIVE_COOKIE)
+      return redirectRes
+    }
+
+    // Refresh the sliding-window activity cookie on every valid request
+    supabaseResponse.cookies.set(LAST_ACTIVE_COOKIE, String(now), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60,
+      path: '/',
+    })
+  }
 
   // Redirect unauthenticated users to login (except public routes)
   if (!user && !isPublicRoute) {

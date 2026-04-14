@@ -4,6 +4,7 @@ import { logout } from '@/app/actions/auth'
 import { LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/dashboard-shell'
+import { Toaster } from '@/components/ui/sonner'
 
 async function getActiveProperty(organizationId: string, propertyId?: string) {
   if (!propertyId) return null
@@ -83,6 +84,7 @@ export default async function DashboardLayout({
       }
     >
       {children}
+      <Toaster position="bottom-right" richColors />
     </DashboardShell>
   )
 }

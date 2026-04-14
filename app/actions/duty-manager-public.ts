@@ -18,17 +18,33 @@ export interface DutyManagerSubmitResult {
   error?: string
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
 export async function submitPublicDutyManagerForm(
   input: DutyManagerSubmitInput
 ): Promise<DutyManagerSubmitResult> {
+  if (!input.propertyId || !UUID_RE.test(input.propertyId)) {
+    return { success: false, error: 'Invalid property.' }
+  }
   if (!input.managerName.trim()) {
     return { success: false, error: 'Manager name is required.' }
   }
-  if (!input.shiftDate) {
-    return { success: false, error: 'Shift date is required.' }
+  if (input.managerName.trim().length > 200) {
+    return { success: false, error: 'Manager name is too long.' }
+  }
+  if (!input.shiftDate || !DATE_RE.test(input.shiftDate)) {
+    return { success: false, error: 'A valid shift date (YYYY-MM-DD) is required.' }
   }
   if (!['AM', 'PM'].includes(input.shift)) {
     return { success: false, error: 'Please select a shift.' }
+  }
+
+  if (
+    JSON.stringify(input.responses).length > 50_000 ||
+    JSON.stringify(input.roomChecks).length > 50_000
+  ) {
+    return { success: false, error: 'Submission payload is too large.' }
   }
 
   const admin = createAdminClient()
@@ -44,7 +60,7 @@ export async function submitPublicDutyManagerForm(
     return { success: false, error: 'Property not found. Please contact support.' }
   }
 
-  const { totalActual, totalPossible, percentage } = computeDMScores(input.responses)
+  const { totalActual, percentage } = computeDMScores(input.responses)
 
   const { error } = await admin
     .from('duty_manager_submissions')

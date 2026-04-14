@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   BREAKFAST_SECTIONS,
   ALL_BREAKFAST_ITEMS,
@@ -10,7 +10,8 @@ import {
 } from '@/lib/restaurant-breakfast-items'
 import { submitPublicBreakfastChecklist } from '@/app/actions/restaurant-breakfast-public'
 import { cn } from '@/lib/utils'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, AlertCircle } from 'lucide-react'
+import { toast, Toaster } from 'sonner'
 
 interface Property {
   id: string
@@ -42,6 +43,11 @@ export function PublicBreakfastChecklistForm({ properties }: { properties: Prope
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const errorRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [error])
 
   const setAnswer = useCallback((itemId: string, answer: boolean) => {
     setResponses(prev => ({ ...prev, [itemId]: answer }))
@@ -56,7 +62,8 @@ export function PublicBreakfastChecklistForm({ properties }: { properties: Prope
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!allAnswered) {
-      setError('Please answer all checklist items before submitting.')
+      const remaining = ALL_BREAKFAST_ITEMS.length - answeredCount
+      setError(`${remaining} checklist item${remaining !== 1 ? 's' : ''} still need${remaining === 1 ? 's' : ''} an answer — scroll through the list above to complete them.`)
       return
     }
     setError(null)
@@ -75,7 +82,9 @@ export function PublicBreakfastChecklistForm({ properties }: { properties: Prope
     if (result.success) {
       setSubmitted(true)
     } else {
-      setError(result.error ?? 'Something went wrong. Please try again.')
+      const msg = result.error ?? 'Something went wrong. Please try again.'
+      setError(msg)
+      toast.error('Submission failed', { description: msg })
     }
   }
 
@@ -287,8 +296,12 @@ export function PublicBreakfastChecklistForm({ properties }: { properties: Prope
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-            {error}
+          <div ref={errorRef} className="bg-red-50 border border-red-300 rounded-xl px-4 py-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-700">Cannot submit yet</p>
+              <p className="text-sm text-red-600 mt-0.5">{error}</p>
+            </div>
           </div>
         )}
 
@@ -301,6 +314,7 @@ export function PublicBreakfastChecklistForm({ properties }: { properties: Prope
         </button>
 
       </form>
+      <Toaster position="top-center" richColors />
     </div>
   )
 }

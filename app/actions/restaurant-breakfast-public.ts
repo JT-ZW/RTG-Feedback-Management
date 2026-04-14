@@ -21,20 +21,39 @@ export interface BreakfastSubmitResult {
   error?: string
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
 export async function submitPublicBreakfastChecklist(
   input: BreakfastSubmitInput
 ): Promise<BreakfastSubmitResult> {
+  if (!input.propertyId || !UUID_RE.test(input.propertyId)) {
+    return { success: false, error: 'Invalid property.' }
+  }
   if (!input.checkedBy.trim()) {
     return { success: false, error: '"Checked By" name is required.' }
+  }
+  if (input.checkedBy.trim().length > 200) {
+    return { success: false, error: '"Checked By" name is too long.' }
   }
   if (!input.restaurantManager.trim()) {
     return { success: false, error: '"Restaurant Manager / Hostess" name is required.' }
   }
+  if (input.restaurantManager.trim().length > 200) {
+    return { success: false, error: '"Restaurant Manager / Hostess" name is too long.' }
+  }
   if (!input.executiveChef.trim()) {
     return { success: false, error: '"Executive / Head Chef" name is required.' }
   }
-  if (!input.submissionDate) {
-    return { success: false, error: 'Date is required.' }
+  if (input.executiveChef.trim().length > 200) {
+    return { success: false, error: '"Executive / Head Chef" name is too long.' }
+  }
+  if (!input.submissionDate || !DATE_RE.test(input.submissionDate)) {
+    return { success: false, error: 'A valid date (YYYY-MM-DD) is required.' }
+  }
+
+  if (JSON.stringify(input.responses).length > 50_000) {
+    return { success: false, error: 'Submission payload is too large.' }
   }
 
   const admin = createAdminClient()
