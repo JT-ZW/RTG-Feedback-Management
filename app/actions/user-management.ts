@@ -10,6 +10,7 @@ import {
   type OrgUser,
   type InviteUserInput,
   type UpdateUserInput,
+  type CreateUserInput,
 } from '@/lib/user-management-types'
 
 // ─── Validation helpers ──────────────────────────────────────────────────────
@@ -156,7 +157,7 @@ export async function inviteUser(
         first_name: input.firstName.trim(),
         last_name: input.lastName.trim(),
       },
-      redirectTo: `${appUrl}/login`,
+      redirectTo: `${appUrl}/auth/callback?next=/reset-password`,
     }
   )
 
@@ -299,6 +300,119 @@ export async function setUserActive(
   if (!isActive) {
     await db.auth.admin.signOut(userId, 'global')
   }
+
+  revalidatePath('/dashboard/users')
+  return { success: true }
+}
+
+// ─── createUser ──────────────────────────────────────────────────────────────
+// Creates a user with a set password directly — no invite email required.
+
+export async function createUser(
+  input: CreateUserInput
+): Promise<{ success: boolean; error?: string }> {
+  const auth = await assertAdmin()
+  if ('error' in auth) return { success: false, error: auth.error }
+
+  if (!input.email.trim()) return { success: false, error: 'Email is required.' }
+  if (!isValidEmail(input.email.trim())) return { success: false, error: 'Invalid email address.' }
+  if (!input.firstName.trim()) return { success: false, error: 'First name is required.' }
+  if (input.firstName.trim().length > 100) return { success: false, error: 'First name is too long.' }
+  if (!input.lastName.trim()) return { success: false, error: 'Last name is required.' }
+  if (input.lastName.trim().length > 100) return { success: false, error: 'Last name is too long.' }
+  if (!input.password || input.password.length < 8) return { success: false, error: 'Password must be at least 8 characters.' }
+  if (input.password.length > 128) return { success: false, error: 'Password is too long.' }
+  if (input.propertyIds.length === 0) return { success: false, error: 'Assign at least one property.' }
+  if (input.propertyIds.length > MAX_PROPERTIES) return { success: false, error: `Cannot assign more than ${MAX_PROPERTIES} properties at once.` }
+  if (input.propertyIds.some(id => !isValidUuid(id))) return { success: false, error: 'Invalid property selection.' }
+
+  const db = createAdminClient()
+
+  // 1 ── Create confirmed user with password
+  const { data: createData, error: createError } = await db.auth.admin.createUser({
+    email: input.email.toLowerCase().trim(),
+    password: input.password,
+    email_confirm: true,
+    user_metadata: {
+      first_name: input.firstName.trim(),
+      last_name: input.lastName.trim(),
+    },
+  })
+
+  if (createError) {
+    if (createError.message.toLowerCase().includes('already registered') ||
+        createError.message.toLowerCase().includes('already exists')) {
+      return { success: false, error: 'A user with this email already exists.' }
+    }
+    return { success: false, error: createError.message }
+  }
+
+  const userId = createData.user.id
+
+  // 2 ── Create profile row
+  const { error: profileError } = await db
+    .from('profiles')
+    .upsert({
+      id: userId,
+      organization_id: auth.orgId,
+      email: input.email.toLowerCase().trim(),
+      first_name: input.firstName.trim(),
+      last_name: input.lastName.trim(),
+      is_active: true,
+    })
+
+  if (profileError) return { success: false, error: `Profile error: ${profileError.message}` }
+
+  // 3 ── Fetch role ID
+  const { data: roleRow } = await db
+    .from('roles')
+    .select('id')
+    .eq('name', input.role)
+    .single()
+
+  if (!roleRow) return { success: false, error: 'Role not found in database. Run migration 018.' }
+
+  // 4 ── Assign role to every selected property
+  const assignments = input.propertyIds.map(propId => ({
+    user_id: userId,
+    property_id: propId,
+    role_id: roleRow.id,
+  }))
+
+  const { error: roleError } = await db
+    .from('user_property_roles')
+    .upsert(assignments)
+
+  if (roleError) return { success: false, error: `Role assignment error: ${roleError.message}` }
+
+  revalidatePath('/dashboard/users')
+  return { success: true }
+}
+
+
+// --- deleteUser ---
+
+export async function deleteUser(
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  const auth = await assertAdmin()
+  if ('error' in auth) return { success: false, error: auth.error }
+
+  if (!isValidUuid(userId)) return { success: false, error: 'Invalid user ID.' }
+
+  const db = createAdminClient()
+
+  const { data: profile } = await db
+    .from('profiles')
+    .select('id')
+    .eq('id', userId)
+    .eq('organization_id', auth.orgId)
+    .single()
+
+  if (!profile) return { success: false, error: 'User not found in your organisation.' }
+
+  const { error } = await db.auth.admin.deleteUser(userId)
+  if (error) return { success: false, error: error.message }
 
   revalidatePath('/dashboard/users')
   return { success: true }

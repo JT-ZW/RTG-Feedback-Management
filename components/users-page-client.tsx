@@ -2,16 +2,16 @@
 
 import { useState, useTransition } from 'react'
 import {
-  Users, UserPlus, Pencil, ShieldCheck, ShieldOff,
-  Mail, Building2, X, Check, ChevronDown, AlertCircle, Loader2,
+  Users, UserPlus, Pencil, ShieldCheck, ShieldOff, Trash2,
+  Mail, Building2, X, Check, ChevronDown, AlertCircle, Loader2, Eye, EyeOff,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-  inviteUser, updateUser, setUserActive,
+  inviteUser, updateUser, setUserActive, createUser, deleteUser,
 } from '@/app/actions/user-management'
 import {
   ROLE_OPTIONS,
-  type OrgUser, type RoleValue, type InviteUserInput, type UpdateUserInput,
+  type OrgUser, type RoleValue, type InviteUserInput, type UpdateUserInput, type CreateUserInput,
 } from '@/lib/user-management-types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -122,6 +122,7 @@ interface UserFormProps {
 
 function UserForm({ properties, editUser, onClose, onSuccess }: UserFormProps) {
   const isEdit = !!editUser
+  const [mode, setMode] = useState<'invite' | 'create'>('invite')
   const [firstName, setFirstName] = useState(editUser?.firstName ?? '')
   const [lastName, setLastName] = useState(editUser?.lastName ?? '')
   const [email, setEmail] = useState(editUser?.email ?? '')
@@ -131,6 +132,8 @@ function UserForm({ properties, editUser, onClose, onSuccess }: UserFormProps) {
   const [selectedProps, setSelectedProps] = useState<string[]>(
     editUser?.properties.map(p => p.id) ?? []
   )
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -141,13 +144,22 @@ function UserForm({ properties, editUser, onClose, onSuccess }: UserFormProps) {
       if (isEdit) {
         const input: UpdateUserInput = { userId: editUser!.id, role, propertyIds: selectedProps }
         result = await updateUser(input)
+      } else if (mode === 'create') {
+        const input: CreateUserInput = { email, firstName, lastName, role, propertyIds: selectedProps, password }
+        result = await createUser(input)
       } else {
         const input: InviteUserInput = { email, firstName, lastName, role, propertyIds: selectedProps }
         result = await inviteUser(input)
       }
 
       if (result.success) {
-        onSuccess(isEdit ? 'User updated successfully.' : 'Invite sent! They will receive an email to set their password.')
+        onSuccess(
+          isEdit
+            ? 'User updated successfully.'
+            : mode === 'create'
+              ? 'User created. They can now log in with the password you set.'
+              : 'Invite sent! They will receive an email to set their password.'
+        )
         onClose()
       } else {
         setError(result.error ?? 'Something went wrong.')
@@ -156,14 +168,14 @@ function UserForm({ properties, editUser, onClose, onSuccess }: UserFormProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4">
-      <div className="bg-white rounded-2xl border border-stone-200 shadow-xl w-full max-w-md">
+    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/30 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl border border-stone-200 shadow-xl w-full sm:max-w-md flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 shrink-0">
           <div className="flex items-center gap-2">
             <UserPlus className="w-4 h-4 text-rtg-gold" />
             <h2 className="text-sm font-semibold text-stone-900">
-              {isEdit ? 'Edit User' : 'Invite User'}
+              {isEdit ? 'Edit User' : mode === 'create' ? 'Create User' : 'Invite User'}
             </h2>
           </div>
           <button onClick={onClose} aria-label="Close" className="text-stone-400 hover:text-stone-600">
@@ -172,7 +184,35 @@ function UserForm({ properties, editUser, onClose, onSuccess }: UserFormProps) {
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 space-y-4">
+        <div className="px-6 py-5 space-y-4 overflow-y-auto">
+          {/* Mode toggle — only shown when creating a new user */}
+          {!isEdit && (
+            <div className="flex rounded-xl border border-stone-200 overflow-hidden text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setMode('invite')}
+                className={`flex-1 py-2 transition-colors ${
+                  mode === 'invite'
+                    ? 'bg-rtg-brown text-white'
+                    : 'text-stone-500 hover:bg-stone-50'
+                }`}
+              >
+                Send Invite Email
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('create')}
+                className={`flex-1 py-2 transition-colors ${
+                  mode === 'create'
+                    ? 'bg-rtg-brown text-white'
+                    : 'text-stone-500 hover:bg-stone-50'
+                }`}
+              >
+                Set Password Directly
+              </button>
+            </div>
+          )}
+
           {!isEdit && (
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -208,6 +248,30 @@ function UserForm({ properties, editUser, onClose, onSuccess }: UserFormProps) {
                 placeholder="tendai@rtg.co.zw"
                 className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm text-stone-800 placeholder:text-stone-300 focus:outline-none focus:border-rtg-gold"
               />
+            </div>
+          )}
+
+          {!isEdit && mode === 'create' && (
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1">Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Min. 8 characters"
+                  className="w-full px-3 py-2 pr-10 border border-stone-200 rounded-xl text-sm text-stone-800 placeholder:text-stone-300 focus:outline-none focus:border-rtg-gold"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-[10px] text-stone-400 mt-1">Share these credentials with the user securely.</p>
             </div>
           )}
 
@@ -268,7 +332,7 @@ function UserForm({ properties, editUser, onClose, onSuccess }: UserFormProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-stone-100">
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-stone-100 shrink-0">
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm text-stone-600 hover:text-stone-800 rounded-xl transition-colors"
@@ -281,7 +345,7 @@ function UserForm({ properties, editUser, onClose, onSuccess }: UserFormProps) {
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-rtg-brown text-white rounded-xl hover:bg-rtg-brown/90 disabled:opacity-50 transition-colors"
           >
             {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {isEdit ? 'Save Changes' : 'Send Invite'}
+            {isEdit ? 'Save Changes' : mode === 'create' ? 'Create User' : 'Send Invite'}
           </button>
         </div>
       </div>
@@ -296,6 +360,21 @@ export function UsersPageClient({ initialUsers, properties, error: initialError 
   const [showInvite, setShowInvite] = useState(false)
   const [editingUser, setEditingUser] = useState<OrgUser | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const handleDelete = async (user: OrgUser) => {
+    setDeletingId(user.id)
+    const result = await deleteUser(user.id)
+    if (result.success) {
+      setUsers(prev => prev.filter(u => u.id !== user.id))
+      toast.success(`${user.firstName} ${user.lastName} has been permanently deleted.`)
+    } else {
+      toast.error(result.error ?? 'Failed to delete user.')
+    }
+    setDeletingId(null)
+    setConfirmDeleteId(null)
+  }
 
   const handleSuccess = (message: string) => {
     toast.success(message)
@@ -415,32 +494,63 @@ export function UsersPageClient({ initialUsers, properties, error: initialError 
                       <span className="text-xs text-stone-500">{user.isActive ? 'Active' : 'Inactive'}</span>
                     </div>
                   </td>
-                  <td className="px-5 py-3.5">
+                  <td className="px-3 sm:px-5 py-3.5">
                     <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => setEditingUser(user)}
-                        title="Edit user"
-                        className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleToggleActive(user)}
-                        disabled={togglingId === user.id}
-                        title={user.isActive ? 'Deactivate user' : 'Reactivate user'}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          user.isActive
-                            ? 'text-stone-400 hover:text-red-600 hover:bg-red-50'
-                            : 'text-stone-400 hover:text-emerald-600 hover:bg-emerald-50'
-                        }`}
-                      >
-                        {togglingId === user.id
-                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          : user.isActive
-                            ? <ShieldOff className="w-3.5 h-3.5" />
-                            : <ShieldCheck className="w-3.5 h-3.5" />
-                        }
-                      </button>
+                      {confirmDeleteId === user.id ? (
+                        // Inline confirmation
+                        <div className="flex items-center flex-wrap gap-1">
+                          <span className="text-xs text-red-600 font-medium mr-1">Delete?</span>
+                          <button
+                            onClick={() => handleDelete(user)}
+                            disabled={deletingId === user.id}
+                            title="Confirm delete"
+                            className="px-2 py-1 rounded-lg text-xs font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                          >
+                            {deletingId === user.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Yes, delete'}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            title="Cancel"
+                            className="px-2 py-1 rounded-lg text-xs text-stone-500 hover:bg-stone-100 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => setEditingUser(user)}
+                            title="Edit user"
+                            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleToggleActive(user)}
+                            disabled={togglingId === user.id}
+                            title={user.isActive ? 'Deactivate user' : 'Reactivate user'}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              user.isActive
+                                ? 'text-stone-400 hover:text-red-600 hover:bg-red-50'
+                                : 'text-stone-400 hover:text-emerald-600 hover:bg-emerald-50'
+                            }`}
+                          >
+                            {togglingId === user.id
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : user.isActive
+                                ? <ShieldOff className="w-3.5 h-3.5" />
+                                : <ShieldCheck className="w-3.5 h-3.5" />
+                            }
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(user.id)}
+                            title="Delete user permanently"
+                            className="p-1.5 rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

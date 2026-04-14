@@ -111,7 +111,7 @@ function OverviewTab({ data }: { data: AnalyticsData }) {
         <div className="space-y-3">
           {moduleAverages.map(mod => (
             <div key={mod.module} className="flex items-center gap-3">
-              <span className="text-xs text-stone-500 w-28 flex-shrink-0">{mod.label}</span>
+              <span className="text-xs text-stone-500 w-20 sm:w-28 shrink-0 truncate">{mod.label}</span>
               <div className="flex-1 bg-stone-100 rounded-full h-5 overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all"
@@ -124,9 +124,9 @@ function OverviewTab({ data }: { data: AnalyticsData }) {
               <span className={`text-xs font-semibold w-14 text-right ${mod.count === 0 ? 'text-stone-400' : mod.avg >= 80 ? 'text-emerald-700' : mod.avg >= 60 ? 'text-amber-700' : 'text-red-700'}`}>
                 {mod.count > 0 ? fmt(mod.avg) : 'No data'}
               </span>
-              <span className="text-xs text-stone-400 w-20 text-right">{mod.count} submissions</span>
+              <span className="text-xs text-stone-400 w-20 text-right hidden sm:block">{mod.count} submissions</span>
               <div
-                className="h-2 rounded-full ml-1"
+                className="h-2 rounded-full ml-1 hidden sm:block"
                 style={{
                   width: `${(mod.count / maxCount) * 60}px`,
                   backgroundColor: '#C8922A30',
@@ -360,7 +360,7 @@ function FailuresTab({ worstItems, shiftBreakdowns, dayOfWeekPatterns }: {
                   <p className="text-sm text-stone-800 font-medium leading-snug">{item.label}</p>
                   <p className="text-xs text-stone-400 mt-0.5">{item.sectionTitle}</p>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${badgeMod(item.module)}`}>
+                <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 hidden sm:inline-flex ${badgeMod(item.module)}`}>
                   {MODULE_LABELS[item.module]}
                 </span>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -411,7 +411,7 @@ function FailuresTab({ worstItems, shiftBreakdowns, dayOfWeekPatterns }: {
                       <span className={`text-xs font-semibold w-12 text-right ${shift.value === null ? 'text-stone-400' : shift.value >= 80 ? 'text-emerald-700' : shift.value >= 60 ? 'text-amber-700' : 'text-red-700'}`}>
                         {fmt(shift.value, 0)}
                       </span>
-                      <span className="text-xs text-stone-400 w-16 text-right">{shift.count} forms</span>
+                      <span className="text-xs text-stone-400 w-16 text-right hidden sm:block">{shift.count} forms</span>
                     </div>
                   ))}
                 </div>

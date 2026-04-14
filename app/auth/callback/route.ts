@@ -30,6 +30,14 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Something went wrong — send back to login with a message
-  return NextResponse.redirect(`${origin}/login?error=reset_failed`)
+  // No `code` param — likely a hash-based invite or recovery token (Supabase embeds the
+  // access_token in the URL fragment, which never reaches the server).
+  // If Supabase itself reported an error, send to login. Otherwise send to the
+  // reset-password page: the browser preserves the hash fragment through the redirect,
+  // and the Supabase client on that page will auto-detect the session from `#access_token=…`.
+  const supabaseError = new URL(request.url).searchParams.get('error')
+  if (supabaseError) {
+    return NextResponse.redirect(`${origin}/login?error=reset_failed`)
+  }
+  return NextResponse.redirect(`${origin}/reset-password`)
 }

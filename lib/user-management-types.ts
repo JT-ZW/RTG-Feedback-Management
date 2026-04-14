@@ -35,3 +35,12 @@ export interface UpdateUserInput {
   role: RoleValue
   propertyIds: string[]
 }
+
+export interface CreateUserInput {
+  email: string
+  firstName: string
+  lastName: string
+  role: RoleValue
+  propertyIds: string[]
+  password: string
+}
