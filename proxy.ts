@@ -14,7 +14,9 @@ import { updateSession } from '@/lib/supabase/middleware'
 const _log = new Map<string, number[]>()
 
 const RULES: { test: (p: string) => boolean; max: number; windowMs: number }[] = [
-  // Public form submissions — 15 POSTs per minute per IP
+  // Dining survey — guests at a table: 3 submissions per 30 minutes per IP
+  { test: (p) => p.startsWith('/forms/dining-survey/'), max: 3, windowMs: 30 * 60_000 },
+  // Other public form submissions — 15 POSTs per minute per IP
   { test: (p) => p.startsWith('/forms/'), max: 15, windowMs: 60_000 },
   // Login — 8 attempts per 15 minutes per IP (brute-force protection)
   { test: (p) => p === '/login',          max: 8,  windowMs: 15 * 60_000 },

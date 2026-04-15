@@ -5,6 +5,7 @@ import {
   Wine,
   UtensilsCrossed,
   Sunrise,
+  Star,
   ArrowUpRight,
   ChevronLeft,
 } from 'lucide-react'
@@ -34,6 +35,14 @@ const FNB_MODULES = [
     icon: Sunrise,
     iconBg: 'bg-yellow-100',
     iconColor: 'text-yellow-700',
+  },
+  {
+    href: '/dashboard/food-and-beverage/dining-survey',
+    label: 'Guest Dining Survey',
+    description: 'QR code-based guest feedback across 7 dining dimensions — meal quality, service, value, and more.',
+    icon: Star,
+    iconBg: 'bg-rose-100',
+    iconColor: 'text-rose-700',
   },
 ]
 

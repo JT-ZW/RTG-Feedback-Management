@@ -683,6 +683,47 @@ export async function generateOrgInsights(): Promise<{ success: boolean; error?:
     if (row.hod_comments?.trim()) extractedComments.push(`[HOD Comment | ${pName}] ${row.hod_comments.trim()}`)
   }
 
+  // ── Dining survey data ────────────────────────────────────────────────────
+  const { data: diningRows } = await admin
+    .from('dining_survey_submissions')
+    .select('property_id, meal_period, avg_score, comments')
+    .eq('organization_id', orgId)
+    .gte('created_at', since)
+
+  const diningArr = (diningRows ?? []) as {
+    property_id: string
+    meal_period: string
+    avg_score: number | null
+    comments: string | null
+  }[]
+
+  totalSubmissions += diningArr.length
+
+  if (diningArr.length > 0) {
+    const byPropMeal: Record<string, Record<string, number[]>> = {}
+    for (const row of diningArr) {
+      if (row.avg_score === null) continue
+      if (!byPropMeal[row.property_id]) byPropMeal[row.property_id] = {}
+      if (!byPropMeal[row.property_id][row.meal_period]) byPropMeal[row.property_id][row.meal_period] = []
+      byPropMeal[row.property_id][row.meal_period].push(row.avg_score)
+    }
+    const diningLines = [`Guest Dining Survey (${diningArr.length} guest responses, 1–5 star scale):`]
+    for (const [propId, meals] of Object.entries(byPropMeal)) {
+      const parts = Object.entries(meals).map(([mp, scores]) => {
+        const a = scores.reduce((x, y) => x + y, 0) / scores.length
+        return `${mp}: ${a.toFixed(2)}\u2605 (n=${scores.length})`
+      })
+      diningLines.push(`  - ${propMap[propId] ?? propId}: ${parts.join(', ')}`)
+    }
+    quantSections.push(diningLines.join('\n'))
+
+    for (const row of diningArr) {
+      if (row.comments?.trim()) {
+        extractedComments.push(`[Guest Dining | ${propMap[row.property_id] ?? 'Unknown'}] ${row.comments.trim()}`)
+      }
+    }
+  }
+
   // ── Build GROQ prompt ─────────────────────────────────────────────────────
   const propertyList = Object.values(propMap).join(', ')
   const commentsBlock = extractedComments.length > 0
@@ -695,15 +736,15 @@ export async function generateOrgInsights(): Promise<{ success: boolean; error?:
 
   const prompt = `You are an operational intelligence analyst for Rainbow Tourism Group (RTG), a hotel management company operating ${Object.keys(propMap).length} properties in Zimbabwe (${propertyList}).
 
-Analyse the following 30-day operational data and respond with a single valid JSON object. No markdown, no explanation outside the JSON.
+Analyse the following 30-day operational and guest satisfaction data and respond with a single valid JSON object. No markdown, no explanation outside the JSON.
 
-## COMPLIANCE DATA (last 30 days, by module and property)
+## OPERATIONAL & GUEST SATISFACTION DATA (last 30 days)
 ${quantSections.join('\n\n')}
 
 ## HIGH-FAILURE CHECKLIST ITEMS (≥30% failure rate)
 ${worstBlock}
 
-## QUALITATIVE OBSERVATIONS (mystery shopper comments, duty manager notes, HOD observations)
+## QUALITATIVE OBSERVATIONS (mystery shopper comments, duty manager notes, HOD observations, guest dining reviews)
 ${commentsBlock}
 
 ## REQUIRED JSON STRUCTURE
@@ -751,6 +792,7 @@ ${commentsBlock}
 
 Rules:
 - Maximum 5 themes, maximum 5 recommendations, maximum 7 property highlights
+- Where guest dining survey data is available, include guest satisfaction scores alongside compliance data in themes and recommendations
 - Every claim must reference specific data — no vague generalisations
 - If data is sparse, be honest about it in executiveSummary
 - Output ONLY the JSON object, nothing else`

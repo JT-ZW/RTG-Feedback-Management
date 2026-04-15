@@ -3,12 +3,13 @@
 import { useState } from 'react'
 
 const TABS = [
-  { id: 'overview',    label: 'Overview' },
-  { id: 'trends',      label: 'Trends' },
-  { id: 'sections',    label: 'Section Drill-Down' },
-  { id: 'failures',    label: 'Failure Analysis' },
-  { id: 'cadence',     label: 'Submission Cadence' },
-  { id: 'ai',          label: 'AI Insights' },
+  { id: 'overview',     label: 'Overview' },
+  { id: 'trends',       label: 'Trends' },
+  { id: 'guest',        label: 'Guest Satisfaction' },
+  { id: 'sections',     label: 'Section Drill-Down' },
+  { id: 'failures',     label: 'Failure Analysis' },
+  { id: 'cadence',      label: 'Submission Cadence' },
+  { id: 'ai',           label: 'AI Insights' },
 ]
 
 interface Props {

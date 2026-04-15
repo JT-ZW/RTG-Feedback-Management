@@ -1,14 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import {
   TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle2,
   BarChart3, Sparkles, Calendar, Sun, ChevronUp, ChevronDown,
-  Activity, Building2, ClipboardList,
+  Activity, Building2, ClipboardList, UtensilsCrossed,
 } from 'lucide-react'
 import { AnalyticsTabs } from '@/components/analytics-tabs'
 import { AnalyticsRefreshButton } from '@/components/analytics-refresh-button'
 import type { AnalyticsData, WorstItem, PropertyTrend, ShiftBreakdown, DayOfWeekPattern, ModuleSectionBreakdown, SubmissionCadence } from '@/app/actions/analytics'
+import { getDiningSurveyTrends, type DiningSurveyTrends } from '@/app/actions/dining-survey-public'
 
 const MODULE_LABELS: Record<string, string> = {
   bar_checklist: 'Bar',
@@ -730,7 +731,193 @@ function AITab({ latestInsight }: { latestInsight: AnalyticsData['latestInsight'
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
-export function AnalyticsDashboard({ data }: { data: AnalyticsData }) {
+// ─── Tab: Guest Satisfaction ──────────────────────────────────────────────────
+const MEAL_COLORS = {
+  breakfast: '#fbbf24', // yellow-400
+  lunch:     '#fb923c', // orange-400
+  dinner:    '#818cf8', // indigo-400
+  overall:   '#a8a29e', // stone-400
+} as const
+
+const PERIOD_BUTTONS: { label: string; value: 7 | 30 | 90 }[] = [
+  { label: '7 days', value: 7 },
+  { label: '30 days', value: 30 },
+  { label: '90 days', value: 90 },
+]
+
+function GuestSatisfactionTab({
+  initialTrends,
+}: {
+  initialTrends: DiningSurveyTrends | { error: string }
+}) {
+  const [period, setPeriod] = useState<7 | 30 | 90>(
+    'periodDays' in initialTrends ? (initialTrends.periodDays as 7 | 30 | 90) : 30,
+  )
+  const [trends, setTrends] = useState(initialTrends)
+  const [isPending, startTransition] = useTransition()
+
+  function changePeriod(days: 7 | 30 | 90) {
+    if (days === period) return
+    setPeriod(days)
+    startTransition(async () => {
+      const result = await getDiningSurveyTrends(days)
+      setTrends(result)
+    })
+  }
+
+  if ('error' in trends) {
+    return (
+      <div className="bg-white rounded-2xl border border-stone-200 p-10 text-center">
+        <UtensilsCrossed className="w-8 h-8 text-stone-300 mx-auto mb-3" />
+        <p className="text-stone-400 text-sm">Unable to load guest satisfaction data.</p>
+      </div>
+    )
+  }
+
+  const { points, bucketLabel } = trends
+  const hasData = points.some((p) => p.overall !== null)
+
+  return (
+    <div className="space-y-4">
+      {/* Period toggle */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-stone-400 font-medium uppercase tracking-wide mr-1">Period:</span>
+        {PERIOD_BUTTONS.map((b) => (
+          <button
+            key={b.value}
+            onClick={() => changePeriod(b.value)}
+            disabled={isPending}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
+              period === b.value
+                ? 'bg-rtg-brown text-white border-rtg-brown'
+                : 'bg-white text-stone-600 border-stone-200 hover:border-stone-300'
+            }`}
+          >
+            {b.label}
+          </button>
+        ))}
+        {isPending && <span className="text-xs text-stone-400 ml-1">Loading…</span>}
+      </div>
+
+      {/* Chart card */}
+      <div className="bg-white rounded-2xl border border-stone-200 p-6">
+        <div className="flex items-start justify-between mb-5 gap-4 flex-wrap">
+          <div>
+            <h3 className="text-sm font-semibold text-stone-700">Guest Dining Satisfaction Trend</h3>
+            <p className="text-xs text-stone-400 mt-0.5">
+              {bucketLabel} averages &middot; Star ratings (1–5 scale)
+            </p>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            {(['breakfast', 'lunch', 'dinner', 'overall'] as const).map((mp) => (
+              <span key={mp} className="flex items-center gap-1.5 text-xs text-stone-500 capitalize">
+                <span
+                  className="w-3 h-3 rounded-sm inline-block flex-shrink-0"
+                  style={{ backgroundColor: MEAL_COLORS[mp] }}
+                />
+                {mp}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {!hasData ? (
+          <div className="flex flex-col items-center justify-center py-14 text-center">
+            <UtensilsCrossed className="w-9 h-9 text-stone-200 mb-4" />
+            <p className="text-stone-400 text-sm">No guest survey responses in this period.</p>
+            <p className="text-stone-300 text-xs mt-1">
+              Once guests submit dining surveys, trends will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <div
+              className="flex items-end gap-2"
+              style={{ minHeight: '10rem', minWidth: `${points.length * 48}px` }}
+            >
+              {points.map((pt, idx) => (
+                <div key={idx} className="flex flex-col items-center gap-1 flex-1 min-w-0">
+                  <div className="flex items-end gap-0.5 w-full justify-center" style={{ height: '8rem' }}>
+                    {(['breakfast', 'lunch', 'dinner', 'overall'] as const).map((mp) => {
+                      const val = pt[mp]
+                      const heightPct = val === null ? 0 : ((val - 1) / 4) * 100
+                      return (
+                        <div
+                          key={mp}
+                          className="flex-1 rounded-t-sm transition-all duration-300"
+                          style={{
+                            height: `${Math.max(heightPct, val !== null ? 3 : 0)}%`,
+                            backgroundColor: val === null ? '#f5f5f4' : MEAL_COLORS[mp],
+                            opacity: val === null ? 0.25 : 1,
+                          }}
+                          title={val !== null ? `${mp}: ${val.toFixed(1)} ★` : `${mp}: no data`}
+                        />
+                      )
+                    })}
+                  </div>
+                  <p className="text-[9px] text-stone-400 text-center leading-tight w-full truncate px-0.5">
+                    {pt.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+            {/* Y-axis hint */}
+            <div className="flex justify-between text-[9px] text-stone-300 mt-1 px-0.5">
+              <span>1★</span>
+              <span>3★</span>
+              <span>5★</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Summary tiles */}
+      {hasData && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {(['breakfast', 'lunch', 'dinner', 'overall'] as const).map((mp) => {
+            const vals = points.map((p) => p[mp]).filter((v): v is number => v !== null)
+            const mean =
+              vals.length
+                ? Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 10) / 10
+                : null
+            const label = mp.charAt(0).toUpperCase() + mp.slice(1)
+            return (
+              <div key={mp} className="bg-white rounded-2xl border border-stone-200 p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span
+                    className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                    style={{ backgroundColor: MEAL_COLORS[mp] }}
+                  />
+                  <p className="text-xs text-stone-400 uppercase tracking-wide font-medium">
+                    {label}
+                  </p>
+                </div>
+                <p className="text-2xl font-bold text-stone-800 mt-0.5">
+                  {mean !== null ? mean.toFixed(1) : '—'}
+                  {mean !== null && (
+                    <span className="text-sm font-normal text-stone-400 ml-1">★</span>
+                  )}
+                </p>
+                <p className="text-xs text-stone-400 mt-0.5">
+                  {vals.length} data point{vals.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Main dashboard ───────────────────────────────────────────────────────────
+export function AnalyticsDashboard({
+  data,
+  initialDiningTrends,
+}: {
+  data: AnalyticsData
+  initialDiningTrends: DiningSurveyTrends | { error: string }
+}) {
   const [activeTab, setActiveTab] = useState('overview')
 
   return (
@@ -749,6 +936,7 @@ export function AnalyticsDashboard({ data }: { data: AnalyticsData }) {
       {/* Tab panels */}
       {activeTab === 'overview' && <OverviewTab data={data} />}
       {activeTab === 'trends' && <TrendsTab trends={data.propertyTrends} />}
+      {activeTab === 'guest' && <GuestSatisfactionTab initialTrends={initialDiningTrends} />}
       {activeTab === 'sections' && <SectionsTab sectionBreakdowns={data.sectionBreakdowns} />}
       {activeTab === 'failures' && (
         <FailuresTab
