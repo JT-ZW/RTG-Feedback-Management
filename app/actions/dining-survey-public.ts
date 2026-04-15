@@ -262,7 +262,7 @@ export async function getDiningSurveyStats(
   const propMap = new Map<string, { name: string; count: number; total: number }>()
   for (const r of rows) {
     const pid  = r.property_id as string
-    const name = (r.properties as { name: string } | null)?.name ?? pid
+    const name = (r.properties as unknown as { name: string } | null)?.name ?? pid
     const entry = propMap.get(pid) ?? { name, count: 0, total: 0 }
     entry.count++
     entry.total += r.avg_score as number ?? 0
