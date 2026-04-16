@@ -5,6 +5,7 @@ import { LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/dashboard-shell'
 import { Toaster } from '@/components/ui/sonner'
+import { DiningNotificationsListener } from '@/components/dining-notifications-listener'
 
 async function getActiveProperty(organizationId: string, propertyId?: string) {
   if (!propertyId) return null
@@ -85,6 +86,7 @@ export default async function DashboardLayout({
     >
       {children}
       <Toaster position="bottom-right" richColors />
+      <DiningNotificationsListener />
     </DashboardShell>
   )
 }

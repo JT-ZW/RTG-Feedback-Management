@@ -6,6 +6,7 @@ import {
   UtensilsCrossed,
   Sunrise,
   Star,
+  Radio,
   ArrowUpRight,
   ChevronLeft,
 } from 'lucide-react'
@@ -43,6 +44,14 @@ const FNB_MODULES = [
     icon: Star,
     iconBg: 'bg-rose-100',
     iconColor: 'text-rose-700',
+  },
+  {
+    href: '/dashboard/food-and-beverage/dining-survey/live',
+    label: 'Dining Live Monitor',
+    description: 'Real-time stream of guest feedback during active meal sessions — filter by property or meal period.',
+    icon: Radio,
+    iconBg: 'bg-emerald-100',
+    iconColor: 'text-emerald-700',
   },
 ]
 

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { detectMealPeriod } from '@/lib/dining-survey'
-import { PublicDiningSurveyForm } from '@/components/public-dining-survey-form'
+import { DiningSurveyFormClient } from '@/components/public-dining-survey-form-client'
 
 interface Props {
   params: Promise<{ propertySlug: string }>
@@ -41,7 +41,7 @@ export default async function DiningSurveyPage({ params }: Props) {
   const autoMealPeriod = detectMealPeriod(new Date())
 
   return (
-    <PublicDiningSurveyForm
+    <DiningSurveyFormClient
       propertyId={property.id}
       propertyName={property.name}
       autoMealPeriod={autoMealPeriod}

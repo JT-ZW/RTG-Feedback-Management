@@ -397,3 +397,80 @@ export async function getDiningSurveyTrends(
 
   return { points, periodDays: days, bucketLabel }
 }
+
+// ── Live session data (today's submissions, for real-time monitor) ────────────
+
+export interface LiveSubmission {
+  id:                   string
+  created_at:           string
+  property_id:          string
+  property_name:        string
+  meal_period:          MealPeriod
+  table_number:         string | null
+  avg_score:            number
+  food_quality:         number
+  food_temperature:     number
+  service_speed:        number
+  staff_friendliness:   number
+  ambience:             number
+  value_for_money:      number
+  overall_satisfaction: number
+  comments:             string | null
+  guest_name:           string | null
+}
+
+export async function getDiningSurveyLiveData(
+  propertyId?: string,
+): Promise<{ submissions: LiveSubmission[] } | { error: string }> {
+  const admin = createAdminClient()
+
+  // Today from midnight CAT (UTC+2) expressed as UTC
+  const nowMs     = Date.now()
+  const catOffset = 2 * 60 * 60 * 1000
+  const catNow    = new Date(nowMs + catOffset)
+  const catMidnight = Date.UTC(
+    catNow.getUTCFullYear(), catNow.getUTCMonth(), catNow.getUTCDate(),
+  )
+  const todaySince = new Date(catMidnight - catOffset).toISOString()
+
+  let query = admin
+    .from('dining_survey_submissions')
+    .select(`
+      id, created_at, property_id, meal_period, table_number,
+      avg_score, food_quality, food_temperature, service_speed,
+      staff_friendliness, ambience, value_for_money, overall_satisfaction,
+      comments, guest_name,
+      properties(name)
+    `)
+    .gte('created_at', todaySince)
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  if (propertyId) {
+    query = query.eq('property_id', propertyId)
+  }
+
+  const { data, error } = await query
+  if (error) return { error: error.message }
+
+  const submissions: LiveSubmission[] = (data ?? []).map((r: any) => ({
+    id:                   r.id,
+    created_at:           r.created_at,
+    property_id:          r.property_id,
+    property_name:        (r.properties as { name: string } | null)?.name ?? r.property_id,
+    meal_period:          r.meal_period as MealPeriod,
+    table_number:         r.table_number,
+    avg_score:            Math.round(Number(r.avg_score) * 10) / 10,
+    food_quality:         r.food_quality,
+    food_temperature:     r.food_temperature,
+    service_speed:        r.service_speed,
+    staff_friendliness:   r.staff_friendliness,
+    ambience:             r.ambience,
+    value_for_money:      r.value_for_money,
+    overall_satisfaction: r.overall_satisfaction,
+    comments:             r.comments,
+    guest_name:           r.guest_name,
+  }))
+
+  return { submissions }
+}

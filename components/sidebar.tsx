@@ -47,6 +47,8 @@ const modules: {
       '/dashboard/bar-checklist',
       '/dashboard/restaurant-lunch-dinner',
       '/dashboard/restaurant-breakfast',
+      '/dashboard/food-and-beverage/dining-survey',
+      '/dashboard/food-and-beverage/dining-survey/live',
     ],
   },
   {

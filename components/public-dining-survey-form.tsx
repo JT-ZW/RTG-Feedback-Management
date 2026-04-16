@@ -280,7 +280,7 @@ export function PublicDiningSurveyForm({ propertyId, propertyName, autoMealPerio
                 value={tableNumber}
                 onChange={(e) => setTableNumber(e.target.value)}
                 disabled={submitting}
-                suppressHydrationWarning
+               
                 className={cn(
                   'w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm',
                   'placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-500',
@@ -299,7 +299,7 @@ export function PublicDiningSurveyForm({ propertyId, propertyName, autoMealPerio
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
                 disabled={submitting}
-                suppressHydrationWarning
+               
                 className={cn(
                   'w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm resize-none',
                   'placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-500',
@@ -318,7 +318,7 @@ export function PublicDiningSurveyForm({ propertyId, propertyName, autoMealPerio
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
                 disabled={submitting}
-                suppressHydrationWarning
+               
                 className={cn(
                   'w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm',
                   'placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-500',
@@ -338,7 +338,7 @@ export function PublicDiningSurveyForm({ propertyId, propertyName, autoMealPerio
                   value={guestEmail}
                   onChange={(e) => setGuestEmail(e.target.value)}
                   disabled={submitting}
-                  suppressHydrationWarning
+                 
                   className={cn(
                     'w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm',
                     'placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-500',
@@ -356,7 +356,7 @@ export function PublicDiningSurveyForm({ propertyId, propertyName, autoMealPerio
                   value={guestPhone}
                   onChange={(e) => setGuestPhone(e.target.value)}
                   disabled={submitting}
-                  suppressHydrationWarning
+                 
                   className={cn(
                     'w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm',
                     'placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-500',
@@ -403,3 +403,4 @@ export function PublicDiningSurveyForm({ propertyId, propertyName, autoMealPerio
     </div>
   )
 }
+
